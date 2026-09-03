@@ -1,46 +1,44 @@
-name: Terraform Lambda CI/CD
+name: Deploy Lambda
 
 on:
   push:
-    branches: [ new ]
-  pull_request:
-    branches: [ new ]
+    branches:
+      - test
 
 jobs:
-  terraform:
+
+  deploy:
+
     runs-on: ubuntu-latest
-    env:
-      #AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-     # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      TF_TOKEN_app_terraform_io: ${{ secrets.TF_TOKEN }}
-      AWS_DEFAULT_REGION: us-east-1
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.8.5
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
 
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt || true
+    - name: Create Zip
+      run: |
+        zip lambda.zip lambda_function.py
 
-      - name: Terraform Init
-        run: terraform init
+    - name: Configure AWS
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
 
-      - name: Terraform Validate
-        run: terraform validate
+    - name: Upload To S3
+      run: |
+        aws s3 cp lambda.zip s3://chandra-lambda-artifacts-demo/lambda.zip
 
-      - name: Terraform Plan
-        run: terraform plan
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
+    - name: Update Lambda
+      run: |
+        aws lambda update-function-code \
+        --function-name python-app \
+        --s3-bucket chandra-lambda-artifacts-demo \
+        --s3-key lambda.zip
