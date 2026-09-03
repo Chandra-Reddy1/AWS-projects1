@@ -5,14 +5,13 @@ on:
     branches:
       - test
 
+  workflow_dispatch:
+
 jobs:
-
   deploy:
-
     runs-on: ubuntu-latest
 
     steps:
-
     - name: Checkout
       uses: actions/checkout@v4
 
@@ -39,6 +38,6 @@ jobs:
     - name: Update Lambda
       run: |
         aws lambda update-function-code \
-        --function-name python-app \
-        --s3-bucket chandra-lambda-artifacts-demo \
-        --s3-key lambda.zip
+          --function-name python-app \
+          --s3-bucket chandra-lambda-artifacts-demo \
+          --s3-key lambda.zip
